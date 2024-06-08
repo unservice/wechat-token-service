@@ -1,7 +1,12 @@
 # deps
 node_modules/
 
-.env.local
-
+# IDE
 .idea
 .vscode
+
+# env
+.env.local
+
+# generated
+lib
