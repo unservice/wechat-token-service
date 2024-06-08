@@ -1,5 +1,6 @@
-import type { AppType } from ".";
 import { hc } from "hono/client";
+import type { WechatTokenServiceType } from ".";
 
-const client = hc<AppType>(process.env.WECHAT_TOKEN_SERVICE_ORIGIN);
-export default client;
+export function createWechatTokenService(origin: string) {
+  return hc<WechatTokenServiceType>(origin);
+}

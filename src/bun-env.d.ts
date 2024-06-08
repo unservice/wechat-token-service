@@ -3,6 +3,5 @@ declare module "bun" {
     WECHAT_APP_ID: string;
     WECHAT_APP_SECRET: string;
     WECHAT_API_DOMAIN: string;
-    WECHAT_TOKEN_SERVICE_ORIGIN: string;
   }
 }

@@ -4,9 +4,9 @@ import { zValidator } from "@hono/zod-validator";
 import { z } from "zod";
 
 const cgiBin = new CgiBin(
-  Bun.env.WECHAT_APP_ID,
-  Bun.env.WECHAT_APP_SECRET,
-  Bun.env.WECHAT_API_DOMAIN,
+  import.meta.env.WECHAT_APP_ID as string,
+  import.meta.env.WECHAT_APP_SECRET as string,
+  import.meta.env.WECHAT_API_DOMAIN as string
 );
 
 class AccessToken {
@@ -56,7 +56,7 @@ const app = new Hono()
     "/token/stable",
     zValidator(
       "query",
-      z.optional(z.object({ forceRefresh: z.enum(["true"]) })),
+      z.optional(z.object({ forceRefresh: z.enum(["true"]) }))
     ),
     async (c) => {
       if (stableToken.expired) {
@@ -71,8 +71,8 @@ const app = new Hono()
         }
       }
       return c.text(stableToken.value ?? "");
-    },
+    }
   );
 
 export default app;
-export type AppType = typeof app;
+export type WechatTokenServiceType = typeof app;

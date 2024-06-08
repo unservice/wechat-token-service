@@ -2,11 +2,13 @@
   "exclude": ["node_modules"],
   "compilerOptions": {
     "target": "ESNext",
+    "module": "ESNext",
     "moduleResolution": "node",
     "strict": true,
     "jsx": "react-jsx",
     "jsxImportSource": "hono/jsx",
     "declaration": true,
-    "declarationDir": "./lib"
+    "declarationDir": "./dist",
+    "skipLibCheck": true
   },
 }
