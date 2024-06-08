@@ -2,11 +2,12 @@ import { Hono } from "hono";
 import { CgiBin } from "@unservice/wechat-sdk/lib/cgi-bin";
 import { zValidator } from "@hono/zod-validator";
 import { z } from "zod";
+import { authentication } from "./middleware/authentication";
 
 const cgiBin = new CgiBin(
   import.meta.env.WECHAT_APP_ID as string,
   import.meta.env.WECHAT_APP_SECRET as string,
-  import.meta.env.WECHAT_API_DOMAIN as string
+  import.meta.env.WECHAT_API_DOMAIN as string,
 );
 
 class AccessToken {
@@ -40,6 +41,7 @@ const token = new AccessToken({ windowSeconds: 300 });
 const stableToken = new AccessToken({ windowSeconds: 300 });
 
 const app = new Hono()
+  .use(authentication)
   .get("/token", async (c) => {
     if (token.expired) {
       const result = await cgiBin.getAccessToken();
@@ -56,7 +58,7 @@ const app = new Hono()
     "/token/stable",
     zValidator(
       "query",
-      z.optional(z.object({ forceRefresh: z.enum(["true"]) }))
+      z.optional(z.object({ forceRefresh: z.enum(["true"]) })),
     ),
     async (c) => {
       if (stableToken.expired) {
@@ -71,7 +73,7 @@ const app = new Hono()
         }
       }
       return c.text(stableToken.value ?? "");
-    }
+    },
   );
 
 export default app;
