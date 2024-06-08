@@ -1,11 +1,4 @@
-To install dependencies:
-```sh
-bun install
-```
+# Wechat token service
 
-To run:
-```sh
-bun run dev
-```
-
-open http://localhost:3000
+![NPM Version](https://img.shields.io/npm/v/@unservice/wechat-token-service)
+![CI](https://github.com/unservice/wechat-token-service/actions/workflows/publish.yaml/badge.svg)
