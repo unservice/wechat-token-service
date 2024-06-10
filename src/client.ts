@@ -1,7 +1,7 @@
 import { hc } from "hono/client";
-import type { WechatTokenServiceType } from ".";
+import { WechatTokenServiceType } from "./server";
 
-export function createWechatTokenService(...params: Parameters<typeof hc>) {
+export function createClient(...params: Parameters<typeof hc>) {
   return hc<WechatTokenServiceType>(...params);
 }
-export type WechatTokenService = ReturnType<typeof createWechatTokenService>;
+export type WechatTokenService = ReturnType<typeof createClient>;

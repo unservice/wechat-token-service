@@ -1,13 +1,12 @@
 {
   "name": "@unservice/wechat-token-service",
   "version": "0.1.0",
-  "module": "dist/client.js",
-  "types": "dist/client.d.ts",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
   "files": [
     "/dist"
   ],
   "scripts": {
-    "dev": "bun run --hot src/index.ts",
     "test": "bun test --coverage",
     "build": "bun run build.ts"
   },

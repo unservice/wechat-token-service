@@ -1,8 +1,9 @@
 import dts from "bun-plugin-dts";
 
 await Bun.build({
-  entrypoints: ["./src/client.ts"],
+  entrypoints: ["./src/index.ts"],
   outdir: "./dist",
   target: "bun",
   plugins: [dts()],
+  external: ["@unservice/*", "@hono/*", "hono", "zod"],
 });
