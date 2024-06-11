@@ -1,4 +1,4 @@
-import { CgiBin } from '@unservice/wechat-sdk/lib/cgi-bin'
+import { CgiBin } from '@unservice/wechat-sdk'
 import { Hono } from 'hono'
 import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
