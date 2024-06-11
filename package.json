@@ -1,6 +1,7 @@
 {
   "name": "@unservice/wechat-token-service",
   "version": "0.2.1",
+  "type": "module",
   "module": "dist/index.js",
   "types": "dist/index.d.ts",
   "files": [
