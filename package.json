@@ -22,6 +22,10 @@
     "type": "git",
     "url": "git+https://github.com/unservice/wechat-token-service.git"
   },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
   "dependencies": {
     "@hono/zod-validator": "^0.2.2",
     "@unservice/wechat-sdk": "^1.4.1",
