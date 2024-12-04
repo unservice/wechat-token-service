@@ -28,7 +28,7 @@
   },
   "dependencies": {
     "@hono/zod-validator": "^0.2.2",
-    "@unservice/wechat-sdk": "^1.4.1",
+    "@unservice/wechat-sdk": "^1.5.0",
     "hono": "^4.6.12"
   },
   "devDependencies": {

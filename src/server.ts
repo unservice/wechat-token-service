@@ -30,6 +30,12 @@ class AccessToken {
   }
 }
 
+class Ticket extends AccessToken {
+  constructor(options: { windowSeconds: number }) {
+    super(options)
+  }
+}
+
 export function createServer({
   appId,
   appSecret,
@@ -42,6 +48,9 @@ export function createServer({
   const cgiBin = new CgiBin(appId, appSecret, apiDomain)
   const token = new AccessToken({ windowSeconds: 300 })
   const stableToken = new AccessToken({ windowSeconds: 300 })
+  const tickets = {
+    jsapi: new Ticket({ windowSeconds: 300 }),
+  }
 
   const app = new Hono()
     .get('/token', async (c) => {
@@ -75,6 +84,30 @@ export function createServer({
           }
         }
         return c.text(stableToken.value ?? '')
+      },
+    )
+    .get(
+      '/ticket',
+      zValidator(
+        'query',
+        z.object({ accessToken: z.string(), type: z.enum(['jsapi']) }),
+      ),
+      async (c) => {
+        const { accessToken, type } = c.req.valid('query')
+        const ticket = tickets[type]
+        if (!ticket) {
+          return new Response('Invalid ticket type', { status: 400 })
+        }
+        if (ticket.expired) {
+          const result = await cgiBin.ticket.getTicket(accessToken, type)
+          if (result.errcode !== 0) {
+            console.error(result)
+            return new Response('Call remote error', { status: 500 })
+          } else {
+            ticket.setToken(result.ticket, result.expires_in)
+          }
+        }
+        return c.text(ticket.value ?? '')
       },
     )
 
