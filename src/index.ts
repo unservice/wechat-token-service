@@ -1,2 +1,8 @@
 export { createServer } from './server'
-export { createClient, type WechatTokenService } from './client'
+export {
+  createClient,
+  createMultipleClient,
+  type WechatTokenService,
+  type WechatMultipleTokenService,
+} from './client'
+export { createMultipleServer } from './multi-server'

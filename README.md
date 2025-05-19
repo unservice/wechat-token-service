@@ -37,6 +37,30 @@ const client = createClient('server origin')
 const token = await client.token.$get().then((res) => res.text())
 ```
 
+## Run multiple server
+
+```ts
+import { createMultipleServer } from './multi-server'
+
+const app = createMultipleServer([
+  {
+    appId: 'wx123456',
+    appSecret: 'your-secret-1',
+    apiDomain: 'api.weixin.qq.com',
+  },
+  {
+    appId: 'wx654321',
+    appSecret: 'your-secret-2',
+    apiDomain: 'api.weixin.qq.com',
+  },
+])
+
+// 访问时需要指定appId参数：
+// GET /token?appId=wx123456
+// GET /token/stable?appId=wx123456&forceRefresh=true
+// GET /ticket?appId=wx123456&accessToken=xxx&type=jsapi
+```
+
 ## Authentication
 
 As you like!
