@@ -20,18 +20,30 @@ export function createServer({
     jsapi: new Ticket({ windowSeconds: 300 }),
   }
 
+  // 设置刷新函数
+  token.setRefreshFunction(async () => {
+    return await cgiBin.getAccessToken()
+  })
+
+  stableToken.setRefreshFunction(async () => {
+    return await cgiBin.getStableAccessToken(false)
+  })
+
+  tickets.jsapi.setRefreshFunction(async () => {
+    // 我们需要临时获取一个有效的accessToken来获取jsapi票据
+    const accessToken = await token.getToken()
+    return await cgiBin.ticket.getTicket(accessToken, 'jsapi')
+  })
+
   const app = new Hono()
     .get('/token', async (c) => {
-      if (token.expired) {
-        const result = await cgiBin.getAccessToken()
-        if ('errcode' in result) {
-          console.error(result)
-          return new Response('Call remote error', { status: 500 })
-        } else {
-          token.setToken(result.accessToken, result.expiresIn)
-        }
+      try {
+        const tokenValue = await token.getToken()
+        return c.text(tokenValue)
+      } catch (error) {
+        console.error('获取token失败:', error)
+        return new Response('获取token失败', { status: 500 })
       }
-      return c.text(token.value ?? '')
     })
     .get(
       '/token/stable',
@@ -40,18 +52,23 @@ export function createServer({
         z.optional(z.object({ forceRefresh: z.enum(['true']) })),
       ),
       async (c) => {
-        if (stableToken.expired) {
+        try {
           const url = new URL(c.req.url)
-          const forceRefresh = !!url.searchParams.get('forceRefresh')
-          const result = await cgiBin.getStableAccessToken(forceRefresh)
-          if ('errcode' in result) {
-            console.error(result)
-            return new Response('Call remote error', { status: 500 })
-          } else {
-            stableToken.setToken(result.accessToken, result.expiresIn)
+          const forceRefresh = url.searchParams.get('forceRefresh') === 'true'
+
+          // 如果需要强制刷新，我们需要重新设置刷新函数
+          if (forceRefresh) {
+            stableToken.setRefreshFunction(async () => {
+              return await cgiBin.getStableAccessToken(true)
+            })
           }
+
+          const tokenValue = await stableToken.getToken(forceRefresh)
+          return c.text(tokenValue)
+        } catch (error) {
+          console.error('获取稳定token失败:', error)
+          return new Response('获取稳定token失败', { status: 500 })
         }
-        return c.text(stableToken.value ?? '')
       },
     )
     .get(
@@ -61,21 +78,25 @@ export function createServer({
         z.object({ accessToken: z.string(), type: z.enum(['jsapi']) }),
       ),
       async (c) => {
-        const { accessToken, type } = c.req.valid('query')
-        const ticket = tickets[type]
-        if (!ticket) {
-          return new Response('Invalid ticket type', { status: 400 })
-        }
-        if (ticket.expired) {
-          const result = await cgiBin.ticket.getTicket(accessToken, type)
-          if (result.errcode !== 0) {
-            console.error(result)
-            return new Response('Call remote error', { status: 500 })
-          } else {
-            ticket.setToken(result.ticket, result.expires_in)
+        try {
+          const { accessToken, type } = c.req.valid('query')
+          const ticket = tickets[type]
+
+          if (!ticket) {
+            return new Response('无效的票据类型', { status: 400 })
           }
+
+          // 为了使用传入的accessToken，我们临时更新刷新函数
+          ticket.setRefreshFunction(async () => {
+            return await cgiBin.ticket.getTicket(accessToken, type)
+          })
+
+          const ticketValue = await ticket.getToken()
+          return c.text(ticketValue)
+        } catch (error) {
+          console.error('获取票据失败:', error)
+          return new Response('获取票据失败', { status: 500 })
         }
-        return c.text(ticket.value ?? '')
       },
     )
 

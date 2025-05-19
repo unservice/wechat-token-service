@@ -37,6 +37,21 @@ export function createMultipleServer(configs: AppConfig[]) {
       jsapi: new Ticket({ windowSeconds: 300 }),
     }
 
+    // 设置刷新函数
+    token.setRefreshFunction(async () => {
+      return await cgiBin.getAccessToken()
+    })
+
+    stableToken.setRefreshFunction(async () => {
+      return await cgiBin.getStableAccessToken(false)
+    })
+
+    tickets.jsapi.setRefreshFunction(async () => {
+      // 依赖于token的获取函数
+      const accessToken = await token.getToken()
+      return await cgiBin.ticket.getTicket(accessToken, 'jsapi')
+    })
+
     appInstances.set(appId, { cgiBin, token, stableToken, tickets })
   }
 
@@ -55,19 +70,16 @@ export function createMultipleServer(configs: AppConfig[]) {
 
   // 获取普通访问令牌
   app.get('/token', appIdValidator, async (c) => {
-    const { appId } = c.req.valid('query')
-    const instance = appInstances.get(appId)!
+    try {
+      const { appId } = c.req.valid('query')
+      const instance = appInstances.get(appId)!
 
-    if (instance.token.expired) {
-      const result = await instance.cgiBin.getAccessToken()
-      if ('errcode' in result) {
-        console.error(result)
-        return new Response('调用远程接口错误', { status: 500 })
-      } else {
-        instance.token.setToken(result.accessToken, result.expiresIn)
-      }
+      const tokenValue = await instance.token.getToken()
+      return c.text(tokenValue)
+    } catch (error) {
+      console.error('获取token失败:', error)
+      return new Response('获取token失败', { status: 500 })
     }
-    return c.text(instance.token.value ?? '')
   })
 
   // 获取稳定版访问令牌
@@ -82,22 +94,24 @@ export function createMultipleServer(configs: AppConfig[]) {
       }),
     ),
     async (c) => {
-      const { appId, forceRefresh } = c.req.valid('query')
-      const instance = appInstances.get(appId)!
-
-      if (instance.stableToken.expired) {
+      try {
+        const { appId, forceRefresh } = c.req.valid('query')
+        const instance = appInstances.get(appId)!
         const forceRefreshBool = forceRefresh === 'true'
-        const result =
-          await instance.cgiBin.getStableAccessToken(forceRefreshBool)
 
-        if ('errcode' in result) {
-          console.error(result)
-          return new Response('调用远程接口错误', { status: 500 })
-        } else {
-          instance.stableToken.setToken(result.accessToken, result.expiresIn)
+        // 如果需要强制刷新，临时更新刷新函数
+        if (forceRefreshBool) {
+          instance.stableToken.setRefreshFunction(async () => {
+            return await instance.cgiBin.getStableAccessToken(true)
+          })
         }
+
+        const tokenValue = await instance.stableToken.getToken(forceRefreshBool)
+        return c.text(tokenValue)
+      } catch (error) {
+        console.error('获取稳定token失败:', error)
+        return new Response('获取稳定token失败', { status: 500 })
       }
-      return c.text(instance.stableToken.value ?? '')
     },
   )
 
@@ -114,26 +128,26 @@ export function createMultipleServer(configs: AppConfig[]) {
       }),
     ),
     async (c) => {
-      const { appId, accessToken, type } = c.req.valid('query')
-      const instance = appInstances.get(appId)!
-      const ticket = instance.tickets[type]
+      try {
+        const { appId, accessToken, type } = c.req.valid('query')
+        const instance = appInstances.get(appId)!
+        const ticket = instance.tickets[type]
 
-      if (!ticket) {
-        return new Response('无效的票据类型', { status: 400 })
-      }
-
-      if (ticket.expired) {
-        const result = await instance.cgiBin.ticket.getTicket(accessToken, type)
-
-        if (result.errcode !== 0) {
-          console.error(result)
-          return new Response('调用远程接口错误', { status: 500 })
-        } else {
-          ticket.setToken(result.ticket, result.expires_in)
+        if (!ticket) {
+          return new Response('无效的票据类型', { status: 400 })
         }
-      }
 
-      return c.text(ticket.value ?? '')
+        // 为了使用传入的accessToken，临时更新刷新函数
+        ticket.setRefreshFunction(async () => {
+          return await instance.cgiBin.ticket.getTicket(accessToken, type)
+        })
+
+        const ticketValue = await ticket.getToken()
+        return c.text(ticketValue)
+      } catch (error) {
+        console.error('获取票据失败:', error)
+        return new Response('获取票据失败', { status: 500 })
+      }
     },
   )
 
