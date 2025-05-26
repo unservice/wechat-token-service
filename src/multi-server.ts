@@ -55,9 +55,6 @@ export function createMultipleServer(configs: AppConfig[]) {
     appInstances.set(appId, { cgiBin, token, stableToken, tickets })
   }
 
-  // 创建Hono应用
-  const app = new Hono()
-
   // 通用的应用ID验证
   const appIdValidator = zValidator(
     'query',
@@ -68,88 +65,92 @@ export function createMultipleServer(configs: AppConfig[]) {
     }),
   )
 
-  // 获取普通访问令牌
-  app.get('/token', appIdValidator, async (c) => {
-    try {
-      const { appId } = c.req.valid('query')
-      const instance = appInstances.get(appId)!
+  // 创建Hono应用
+  const app = new Hono()
 
-      const tokenValue = await instance.token.getToken()
-      return c.text(tokenValue)
-    } catch (error) {
-      console.error('获取token失败:', error)
-      return new Response('获取token失败', { status: 500 })
-    }
-  })
-
-  // 获取稳定版访问令牌
-  app.get(
-    '/token/stable',
-    appIdValidator,
-    zValidator(
-      'query',
-      z.object({
-        appId: z.string(),
-        forceRefresh: z.enum(['true']).optional(),
-      }),
-    ),
-    async (c) => {
+    // 获取普通访问令牌
+    .get('/token', appIdValidator, async (c) => {
       try {
-        const { appId, forceRefresh } = c.req.valid('query')
+        const { appId } = c.req.valid('query')
         const instance = appInstances.get(appId)!
-        const forceRefreshBool = forceRefresh === 'true'
 
-        // 如果需要强制刷新，临时更新刷新函数
-        if (forceRefreshBool) {
-          instance.stableToken.setRefreshFunction(async () => {
-            return await instance.cgiBin.getStableAccessToken(true)
-          })
-        }
-
-        const tokenValue = await instance.stableToken.getToken(forceRefreshBool)
+        const tokenValue = await instance.token.getToken()
         return c.text(tokenValue)
       } catch (error) {
-        console.error('获取稳定token失败:', error)
-        return new Response('获取稳定token失败', { status: 500 })
+        console.error('获取token失败:', error)
+        return new Response('获取token失败', { status: 500 })
       }
-    },
-  )
+    })
 
-  // 获取票据
-  app.get(
-    '/ticket',
-    appIdValidator,
-    zValidator(
-      'query',
-      z.object({
-        appId: z.string(),
-        accessToken: z.string(),
-        type: z.enum(['jsapi']),
-      }),
-    ),
-    async (c) => {
-      try {
-        const { appId, accessToken, type } = c.req.valid('query')
-        const instance = appInstances.get(appId)!
-        const ticket = instance.tickets[type]
+    // 获取稳定版访问令牌
+    .get(
+      '/token/stable',
+      appIdValidator,
+      zValidator(
+        'query',
+        z.object({
+          appId: z.string(),
+          forceRefresh: z.enum(['true']).optional(),
+        }),
+      ),
+      async (c) => {
+        try {
+          const { appId, forceRefresh } = c.req.valid('query')
+          const instance = appInstances.get(appId)!
+          const forceRefreshBool = forceRefresh === 'true'
 
-        if (!ticket) {
-          return new Response('无效的票据类型', { status: 400 })
+          // 如果需要强制刷新，临时更新刷新函数
+          if (forceRefreshBool) {
+            instance.stableToken.setRefreshFunction(async () => {
+              return await instance.cgiBin.getStableAccessToken(true)
+            })
+          }
+
+          const tokenValue =
+            await instance.stableToken.getToken(forceRefreshBool)
+          return c.text(tokenValue)
+        } catch (error) {
+          console.error('获取稳定token失败:', error)
+          return new Response('获取稳定token失败', { status: 500 })
         }
+      },
+    )
 
-        // 为了使用传入的accessToken，临时更新刷新函数
-        ticket.setRefreshFunction(async () => {
-          return await instance.cgiBin.ticket.getTicket(accessToken, type)
-        })
+    // 获取票据
+    .get(
+      '/ticket',
+      appIdValidator,
+      zValidator(
+        'query',
+        z.object({
+          appId: z.string(),
+          accessToken: z.string(),
+          type: z.enum(['jsapi']),
+        }),
+      ),
+      async (c) => {
+        try {
+          const { appId, accessToken, type } = c.req.valid('query')
+          const instance = appInstances.get(appId)!
+          const ticket = instance.tickets[type]
 
-        const ticketValue = await ticket.getToken()
-        return c.text(ticketValue)
-      } catch (error) {
-        console.error('获取票据失败:', error)
-        return new Response('获取票据失败', { status: 500 })
-      }
-    },
-  )
+          if (!ticket) {
+            return new Response('无效的票据类型', { status: 400 })
+          }
+
+          // 为了使用传入的accessToken，临时更新刷新函数
+          ticket.setRefreshFunction(async () => {
+            return await instance.cgiBin.ticket.getTicket(accessToken, type)
+          })
+
+          const ticketValue = await ticket.getToken()
+          return c.text(ticketValue)
+        } catch (error) {
+          console.error('获取票据失败:', error)
+          return new Response('获取票据失败', { status: 500 })
+        }
+      },
+    )
 
   return app
 }
